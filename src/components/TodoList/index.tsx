@@ -5,6 +5,7 @@ import TodoItem from "./TodoItem";
 const TodoList = ({ todos }: { todos: Todo[] }) => {
   return (
     <div>
+      <h1>ToDos</h1>
       {todos.map((todo) => (
         <div key={todo.id}>
           <TodoItem todo={todo} />
