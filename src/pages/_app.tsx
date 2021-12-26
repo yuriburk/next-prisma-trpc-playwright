@@ -1,28 +1,71 @@
+import { ReactElement, ReactNode } from "react";
+import { httpBatchLink } from "@trpc/client/links/httpBatchLink";
+import { loggerLink } from "@trpc/client/links/loggerLink";
 import { withTRPC } from "@trpc/next";
+import { NextPage } from "next";
+import { AppProps } from "next/app";
 import { AppType } from "next/dist/shared/lib/utils";
+import superjson from "superjson";
 
-import { AppRouter } from "./api/trpc/[trpc]";
+import { AppRouter } from "../server/routers/_app";
 
-const MyApp: AppType = ({ Component, pageProps }) => {
-  return <Component {...pageProps} />;
+export type NextPageWithLayout = NextPage & {
+  getLayout?: (page: ReactElement) => ReactNode;
 };
 
-export default withTRPC<AppRouter>({
-  config({ ctx }) {
-    /**
-     * If you want to use SSR, you need to use the server's full URL
-     * @link https://trpc.io/docs/ssr
-     */
-    const url = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}/api/trpc`
-      : "http://localhost:3000/api/trpc";
+type AppPropsWithLayout = AppProps & {
+  Component: NextPageWithLayout;
+};
 
+const MyApp = (({ Component, pageProps }: AppPropsWithLayout) => {
+  const getLayout =
+    Component.getLayout ?? ((page) => <Component>{page}</Component>);
+
+  return getLayout(<Component {...pageProps} />);
+}) as AppType;
+
+function getBaseUrl() {
+  if (process.browser) {
+    return "";
+  }
+  // reference for vercel.com
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  // // reference for render.com
+  if (process.env.RENDER_INTERNAL_HOSTNAME) {
+    return `http://${process.env.RENDER_INTERNAL_HOSTNAME}:${process.env.PORT}`;
+  }
+
+  // assume localhost
+  return `http://localhost:${process.env.PORT ?? 3000}`;
+}
+
+export default withTRPC<AppRouter>({
+  config() {
     return {
-      url,
+      links: [
+        loggerLink({
+          enabled: (opts) =>
+            process.env.NODE_ENV === "development" ||
+            (opts.direction === "down" && opts.result instanceof Error),
+        }),
+        httpBatchLink({
+          url: `${getBaseUrl()}/api/trpc`,
+        }),
+      ],
+      transformer: superjson,
     };
   },
-  /**
-   * @link https://trpc.io/docs/ssr
-   */
   ssr: true,
+  responseMeta({ clientErrors }) {
+    if (clientErrors.length) {
+      return {
+        status: clientErrors[0].data?.httpStatus ?? 500,
+      };
+    }
+
+    return {};
+  },
 })(MyApp);

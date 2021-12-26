@@ -9,6 +9,7 @@ const CreateTodo = ({ onCreate }: { onCreate: (name: string) => void }) => {
 
   const handleCreate = () => {
     onCreate(name);
+    setName("");
   };
 
   return (

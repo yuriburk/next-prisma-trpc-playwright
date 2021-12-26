@@ -1,4 +1,5 @@
 import React from "react";
+import { Todo } from "@prisma/client";
 
 import TodoItem from "./TodoItem";
 
