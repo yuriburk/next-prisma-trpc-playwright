@@ -2,15 +2,22 @@ import * as trpc from "@trpc/server";
 import * as trpcNext from "@trpc/server/adapters/next";
 import { z } from "zod";
 
-const appRouter = trpc.router().query("hello", {
+const appRouter = trpc.router().query("todos", {
   input: z
     .object({
-      text: z.string().nullish(),
+      name: z.string().nullish(),
     })
     .nullish(),
   resolve({ input }) {
     return {
-      greeting: `Hello ${input?.text ?? "world"}`,
+      todos: (
+        [
+          { id: 1, name: "Todo" },
+          { id: 2, name: "Todo" },
+          { id: 3, name: "Todo" },
+          { id: 4, name: "Todo" },
+        ] as Todo[]
+      ).filter((todo) => todo.name.includes(input?.name ?? "")),
     };
   },
 });
